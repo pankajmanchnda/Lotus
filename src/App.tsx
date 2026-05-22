@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity, BookOpen, CheckCircle2, Layers, RefreshCw, ShieldAlert, Clock } from "lucide-react";
+import { Activity, BookOpen, CheckCircle2, Layers, RefreshCw, Clock } from "lucide-react";
 import { ClassicalAyurvedicEngine } from "./engine";
 import { SYMPTOM_OPTIONS } from "./libraryData";
 import type { EvaluationResult, UserIntake, WeatherProfile } from "./types";
@@ -145,7 +145,6 @@ export default function App() {
             </div>
           ) : (
             <>
-              {/* Telemetry Panel */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-3 text-slate-200">Algorithmic Diagnostics Summary</h3>
                 <div className="grid grid-cols-2 gap-4 mt-4">
@@ -160,7 +159,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Verified Clinical Action Framework Cards (Replacing Old PDF String Rendering Entirely) */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-4 text-slate-200">Text-Validated Action Protocols</h3>
                 {result.protocolMatches.length === 0 ? (
@@ -210,7 +208,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Lifestyle Panels */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-3 text-slate-200">Daily Seasonal Guidelines</h3>
                 <div className="space-y-3 mt-4 text-sm">
