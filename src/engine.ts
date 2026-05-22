@@ -4,10 +4,7 @@ import type { ClinicalModule, EvaluationResult, ProtocolRow, Remedy, UserIntake 
 export class ClassicalAyurvedicEngine {
   public static evaluateIntake(intake: UserIntake): EvaluationResult | null {
     const disease = ClassicalAyurvedicEngine.findClinicalModule(intake);
-
-    if (!disease) {
-      return null;
-    }
+    if (!disease) return null;
 
     const rows: ProtocolRow[] = disease.remedies.map((remedy: Remedy) => ({
       user: "Patient",
@@ -20,18 +17,16 @@ export class ClassicalAyurvedicEngine {
     return {
       primaryDosha: disease.primaryDosha,
       calculatedAgni: "Samagni",
-      practitionerPage: {
-        title: "Practitioner Protocol",
-        rows
-      },
+      practitionerPage: { title: "Practitioner Protocol", rows },
       patientPage: {
         title: "Patient Plan",
-        rows: rows.map((row: ProtocolRow) => ({
-          ...row,
-          user: "You"
-        }))
+        rows: rows.map((row: ProtocolRow) => ({ ...row, user: "You" }))
       }
     };
+  }
+
+  public static generateProtocol(intake: UserIntake): EvaluationResult | null {
+    return ClassicalAyurvedicEngine.evaluateIntake(intake);
   }
 
   private static findClinicalModule(intake: UserIntake): ClinicalModule | undefined {

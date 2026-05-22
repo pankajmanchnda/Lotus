@@ -1,6 +1,33 @@
 export type Dosha = "Vata" | "Pitta" | "Kapha";
 export type AgniType = "Mandagni" | "Tikshnagni" | "Vishamagni" | "Samagni";
-export type WeatherProfile = "Cold-Dry" | "Hot-Humid" | "Cold-Humid" | "Variable-Windy";
+export type ComplianceStatus = "PASSED" | "FAILED";
+
+export interface UserIntake {
+  symptomText?: string;
+  selectedSymptoms?: string[];
+  age?: number;
+  dailySteps?: number;
+}
+
+export interface Ingredient {
+  name: string;
+  botanicalName: string;
+  source: string;
+  isHeavyMetalOrMineral: boolean;
+}
+
+export interface Remedy {
+  id: string;
+  name: string;
+  textReference: string;
+  styleReference: string;
+  formFactor: string;
+  targetDoshas
+
+
+cat > src/types.ts <<'EOF'
+export type Dosha = "Vata" | "Pitta" | "Kapha";
+export type AgniType = "Mandagni" | "Tikshnagni" | "Vishamagni" | "Samagni";
 export type ComplianceStatus = "PASSED" | "FAILED";
 
 export interface UserIntake {
@@ -50,14 +77,9 @@ export interface ProtocolRow {
   objective: string;
 }
 
-export interface ProtocolPage {
-  title: string;
-  rows: ProtocolRow[];
-}
-
 export interface EvaluationResult {
   primaryDosha: Dosha;
   calculatedAgni: AgniType;
-  practitionerPage: ProtocolPage;
-  patientPage: ProtocolPage;
+  practitionerPage: { title: string; rows: ProtocolRow[] };
+  patientPage: { title: string; rows: ProtocolRow[] };
 }
