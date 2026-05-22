@@ -12,7 +12,7 @@ export class ClassicalAyurvedicEngine {
     let pittaScore = 0;
     let kaphaScore = 0;
 
-    // Build fresh evaluation arrays from symptoms checked on this run
+    // Build fresh evaluation arrays from checkboxes ONLY
     const activeSymptoms = [...input.selectedSymptoms];
 
     activeSymptoms.forEach((symptom) => {
@@ -66,15 +66,12 @@ export class ClassicalAyurvedicEngine {
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    // Pull clean, active formulations directly from the classical knowledge base 
     const safeFormulations = matchedDisease && urgentFlags.length === 0
       ? (matchedDisease as DiseaseProfile).remedies.filter((remedy) => {
           const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
           const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
           const matchesAllergy = remedy.ingredients.some((ing) => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
-          
-          // Enforce absolute botanical compliance rules for US exports
           const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
 
           return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
@@ -95,24 +92,24 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    // Build the structural format recommendation dynamically using the pristine library data core
+    // MAP THE PRISTINE REFUGE DATA DIRECTLY INTO YOUR PREFERRED CARD LAYOUT STRUCT
     const formattedProtocolMatches = matchedDisease && safeFormulations.length > 0 ? [{
       id: matchedDisease.id,
-      sourceDocument: "BHAISHAJYA RATNAVALI KNOWLEDGE BASE",
-      audience: ("Adult " + primaryDosha + " Framework") as any,
+      sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
+      audience: ("Adult " + primaryDosha + " Protocol") as any,
       matchKeywords: matchedDisease.cardinalSymptoms,
       goals: [ahara],
-      objective: `Targeted text-validated strategy addressing ${matchedDisease.name} (${matchedDisease.modernApproximation}) extracted using gold-standard techniques.`,
-      sourceExcerpt: `Diagnostic Source: ${matchedDisease.diagnosticSource} | Structural Formulation Mapping Engine.`,
-      timing: "Calculated based on metabolic state metrics.",
+      objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
+      sourceExcerpt: `Source Tracking: ${matchedDisease.diagnosticSource} | Formulation Framework.`,
+      timing: "Post-Meal Chronobiology Sync",
       safetyNotes: [
-        "Formulation complies with strict botanical export standards.",
-        "Ensure a 2-hour interval is maintained between herbal inputs and any modern prescription options."
+        "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
+        "Maintain a 2-hour separation from modern allopathic pharmacological agents."
       ],
       medicines: safeFormulations.map(form => ({
         name: form.name,
         dosageInstructions: form.posology,
-        timing: `Administration Mode: ${form.formFactor}`,
+        timing: `Preparation Style: ${form.formFactor}`,
         isHeavyMetalOrMineral: false,
         usComplianceStatus: form.usComplianceStatus,
         complianceNotes: form.complianceNotes
@@ -124,8 +121,16 @@ export class ClassicalAyurvedicEngine {
       calculatedAgni,
       matchedDisease,
       safeFormulations,
-      protocolMatches: formattedProtocolMatches, // Feeds pristine data straight into the clean layout format
+      protocolMatches: formattedProtocolMatches, 
       lifestyleRegimen: { ahara, vihara }
     };
   }
+}
+
+export function normalize(value: unknown): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+export function evaluateIntake(input: UserIntake): EvaluationResult {
+  return ClassicalAyurvedicEngine.evaluateIntake(input);
 }
