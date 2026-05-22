@@ -1,21 +1,49 @@
 import { DISEASES_LIBRARY } from "./libraryData";
-import { ClinicalModule, Remedy } from "./types";
+import type { ClinicalModule, EvaluationResult, ProtocolRow, Remedy, UserIntake } from "./types";
 
 export class ClassicalAyurvedicEngine {
-  public static evaluateIntake(intake: any): any {
-    const disease = DISEASES_LIBRARY.find((d: ClinicalModule) => d.id === "DIS-CONST-004");
-    if (!disease) return null;
+  public static evaluateIntake(intake: UserIntake): EvaluationResult | null {
+    const disease = ClassicalAyurvedicEngine.findClinicalModule(intake);
 
-    const rows = disease.remedies.map((r: Remedy) => ({
-      user: "Patient", time: "Post-Meal", medication: r.name,
-      dosage: r.posology, objective: r.complianceNotes
+    if (!disease) {
+      return null;
+    }
+
+    const rows: ProtocolRow[] = disease.remedies.map((remedy: Remedy) => ({
+      user: "Patient",
+      time: "Post-Meal",
+      medication: remedy.name,
+      dosage: remedy.posology,
+      objective: remedy.complianceNotes
     }));
 
     return {
       primaryDosha: disease.primaryDosha,
       calculatedAgni: "Samagni",
-      practitionerPage: { title: "Practitioner Protocol", rows },
-      patientPage: { title: "Patient Plan", rows: rows.map(r => ({ ...r, user: "You" })) }
+      practitionerPage: {
+        title: "Practitioner Protocol",
+        rows
+      },
+      patientPage: {
+        title: "Patient Plan",
+        rows: rows.map((row: ProtocolRow) => ({
+          ...row,
+          user: "You"
+        }))
+      }
     };
+  }
+
+  private static findClinicalModule(intake: UserIntake): ClinicalModule | undefined {
+    const selectedSymptoms = intake.selectedSymptoms ?? [];
+    const symptomText = intake.symptomText?.toLowerCase() ?? "";
+
+    const symptomMatch = DISEASES_LIBRARY.find((module: ClinicalModule) =>
+      module.cardinalSymptoms.some((symptom: string) =>
+        selectedSymptoms.includes(symptom) || symptomText.includes(symptom.toLowerCase())
+      )
+    );
+
+    return symptomMatch ?? DISEASES_LIBRARY.find((module: ClinicalModule) => module.id === "DIS-CONST-004");
   }
 }
