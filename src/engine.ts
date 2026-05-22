@@ -6,18 +6,28 @@ const urgentSymptoms = [
   "severe pain", "fainting", "stroke", "suicidal", "jaundice", "fever"
 ];
 
+function tokenizeFreeText(value: string): string[] {
+  return String(value || "").trim().toLowerCase()
+    .split(/[,;\n\.]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export class ClassicalAyurvedicEngine {
   public static evaluateIntake(input: UserIntake): EvaluationResult {
     let vataScore = 0;
     let pittaScore = 0;
     let kaphaScore = 0;
 
-    const activeSymptoms = [...input.selectedSymptoms];
+    // Combine checkboxes with free-text input for a comprehensive profile analysis
+    const tokenizedFreeText = [...tokenizeFreeText(input.symptomText), ...tokenizeFreeText(input.goalsText)];
+    const comprehensiveSymptoms = [...input.selectedSymptoms, ...tokenizedFreeText];
 
-    activeSymptoms.forEach((symptom) => {
-      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) vataScore += 3;
-      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) pittaScore += 3;
-      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) kaphaScore += 3;
+    comprehensiveSymptoms.forEach((symptom) => {
+      const norm = String(symptom).toLowerCase();
+      if (["alternating constipation & diarrhea", "mucus in stool", "abdominal gurgling & mild pain", "constipation", "bloating", "gas", "anxiety", "insomnia", "stress", "blood pressure"].some(match => norm.includes(match))) vataScore += 3;
+      if (["heartburn & burning sensation", "acid reflux after meals", "nausea & sour eructations", "acidity", "burning", "heat", "anger"].some(match => norm.includes(match))) pittaScore += 3;
+      if (["lethargy & heaviness in stomach", "slow digestion & weight retention", "white tongue coating & brain fog", "sluggish", "weight gain", "fatigue", "tired", "energy", "thyroid"].some(match => norm.includes(match))) kaphaScore += 3;
     });
 
     if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
@@ -38,10 +48,9 @@ export class ClassicalAyurvedicEngine {
     else if (primaryDosha === "Vata") calculatedAgni = "Vishamagni";
     else if (primaryDosha === "Pitta") calculatedAgni = "Tikshnagni";
 
-    // BULLETPROOF FIX: Use reduce instead of a let variable + loop. TypeScript cannot fail here.
     const matchResult = DISEASES_LIBRARY.reduce<{ disease: DiseaseProfile | null; max: number }>(
       (acc, currentDisease) => {
-        const intersections = currentDisease.cardinalSymptoms.filter(s => activeSymptoms.includes(s)).length;
+        const intersections = currentDisease.cardinalSymptoms.filter(s => comprehensiveSymptoms.some(comp => comp.includes(s.toLowerCase()) || s.toLowerCase().includes(comp))).length;
         if (intersections > acc.max) {
           return { disease: currentDisease, max: intersections };
         }
@@ -50,7 +59,13 @@ export class ClassicalAyurvedicEngine {
       { disease: null, max: 0 }
     );
 
-    const activeDisease = matchResult.disease;
+    // Fallback logic: If free text doesn't exactly match a cardinal symptom, assign a baseline disease based on the primary Dosha calculation
+    let activeDisease = matchResult.disease;
+    if (!activeDisease) {
+        if (primaryDosha === "Vata") activeDisease = DISEASES_LIBRARY.find(d => d.id === "DIS-GRAH-001") || null;
+        else if (primaryDosha === "Pitta") activeDisease = DISEASES_LIBRARY.find(d => d.id === "DIS-AMLA-002") || null;
+        else if (primaryDosha === "Kapha") activeDisease = DISEASES_LIBRARY.find(d => d.id === "DIS-AGNI-003") || null;
+    }
 
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
@@ -84,13 +99,19 @@ export class ClassicalAyurvedicEngine {
     const formattedProtocolMatches: any[] = [];
     
     if (activeDisease !== null && safeFormulations.length > 0) {
+        
+        // Dynamically build the personalized objective weaving in the user's free text
+        const userSymptoms = input.symptomText ? input.symptomText : 'reported imbalances';
+        const userGoals = input.goalsText ? input.goalsText : 'achieve optimal wellness';
+        const personalizedObjective = `Custom protocol targeting ${userSymptoms} to help you ${userGoals}. Clinically matched to classical ${activeDisease.name} (${activeDisease.modernApproximation}).`;
+
         formattedProtocolMatches.push({
           id: activeDisease.id,
           sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
           audience: "Adult " + primaryDosha + " Protocol",
           matchKeywords: activeDisease.cardinalSymptoms,
           goals: [ahara],
-          objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
+          objective: personalizedObjective,
           sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
           timing: "Post-Meal Chronobiology Sync",
           safetyNotes: [
