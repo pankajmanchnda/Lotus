@@ -1,4 +1,4 @@
-import type { ClinicalModule } from "./types";
+import type { DiseaseProfile, Formulation } from "./types";
 
 export const SYMPTOM_OPTIONS = [
   "Alternating Constipation & Diarrhea", "Mucus in Stool", "Heartburn & Burning Sensation",
@@ -12,7 +12,7 @@ export const SYMPTOM_OPTIONS = [
   "Irregular or Painful Cycles", "Low Vitality & Libido", "Hormonal Mood Fluctuations"
 ];
 
-export const DISEASES_LIBRARY: ClinicalModule[] = [
+export const DISEASES_LIBRARY: DiseaseProfile[] = [
   {
     id: "DIS-CONST-004",
     name: "Abhayarishta Protocol",
@@ -36,3 +36,5 @@ export const DISEASES_LIBRARY: ClinicalModule[] = [
     }]
   }
 ];
+
+export const FORMULATIONS_LIBRARY: Formulation[] = DISEASES_LIBRARY.flatMap((disease) => disease.remedies);
