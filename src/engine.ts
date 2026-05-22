@@ -51,7 +51,6 @@ export class ClassicalAyurvedicEngine {
     let matchedDisease: DiseaseProfile | null = null;
     let maxMatches = 0;
 
-    // FIXED: Using a standard for...of loop so TypeScript tracks the variable correctly
     for (const disease of DISEASES_LIBRARY) {
       const intersections = disease.cardinalSymptoms.filter((symptom) => 
         activeSymptoms.includes(symptom)
@@ -65,7 +64,7 @@ export class ClassicalAyurvedicEngine {
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    // FIXED: Explicitly assigning the type so the compiler stops panicking
+    // Force TypeScript to recognize the type properly
     const activeDisease = matchedDisease as DiseaseProfile | null;
 
     const safeFormulations = activeDisease && urgentFlags.length === 0
