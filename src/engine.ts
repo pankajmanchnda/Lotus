@@ -51,7 +51,8 @@ export class ClassicalAyurvedicEngine {
     let matchedDisease: DiseaseProfile | null = null;
     let maxMatches = 0;
 
-    DISEASES_LIBRARY.forEach((disease) => {
+    // FIXED: Using a standard for...of loop so TypeScript tracks the variable correctly
+    for (const disease of DISEASES_LIBRARY) {
       const intersections = disease.cardinalSymptoms.filter((symptom) => 
         activeSymptoms.includes(symptom)
       ).length;
@@ -59,13 +60,16 @@ export class ClassicalAyurvedicEngine {
         maxMatches = intersections;
         matchedDisease = disease;
       }
-    });
+    }
 
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    const safeFormulations = matchedDisease && urgentFlags.length === 0
-      ? (matchedDisease as DiseaseProfile).remedies.filter((remedy) => {
+    // FIXED: Explicitly assigning the type so the compiler stops panicking
+    const activeDisease = matchedDisease as DiseaseProfile | null;
+
+    const safeFormulations = activeDisease && urgentFlags.length === 0
+      ? activeDisease.remedies.filter((remedy) => {
           const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
           const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
@@ -90,14 +94,14 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    const formattedProtocolMatches = matchedDisease && safeFormulations.length > 0 ? [{
-      id: matchedDisease.id,
+    const formattedProtocolMatches = activeDisease && safeFormulations.length > 0 ? [{
+      id: activeDisease.id,
       sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
       audience: "Adult " + primaryDosha + " Protocol",
-      matchKeywords: matchedDisease.cardinalSymptoms,
+      matchKeywords: activeDisease.cardinalSymptoms,
       goals: [ahara],
-      objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
-      sourceExcerpt: `Source Tracking: ${matchedDisease.diagnosticSource} | Formulation Framework.`,
+      objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
+      sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
       timing: "Post-Meal Chronobiology Sync",
       safetyNotes: [
         "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
@@ -116,7 +120,7 @@ export class ClassicalAyurvedicEngine {
     return {
       primaryDosha,
       calculatedAgni,
-      matchedDisease,
+      matchedDisease: activeDisease,
       safeFormulations,
       protocolMatches: formattedProtocolMatches, 
       lifestyleRegimen: { ahara, vihara }
