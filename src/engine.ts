@@ -15,15 +15,9 @@ export class ClassicalAyurvedicEngine {
     const activeSymptoms = [...input.selectedSymptoms];
 
     activeSymptoms.forEach((symptom) => {
-      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) {
-        vataScore += 3;
-      }
-      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) {
-        pittaScore += 3;
-      }
-      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) {
-        kaphaScore += 3;
-      }
+      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) vataScore += 3;
+      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) pittaScore += 3;
+      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) kaphaScore += 3;
     });
 
     if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
@@ -40,43 +34,38 @@ export class ClassicalAyurvedicEngine {
     if (kaphaScore > vataScore && kaphaScore > pittaScore) primaryDosha = "Kapha";
 
     let calculatedAgni: AgniType = "Samagni";
-    if (primaryDosha === "Kapha" || input.dailySteps < 4000) {
-      calculatedAgni = "Mandagni";
-    } else if (primaryDosha === "Vata") {
-      calculatedAgni = "Vishamagni";
-    } else if (primaryDosha === "Pitta") {
-      calculatedAgni = "Tikshnagni";
-    }
+    if (primaryDosha === "Kapha" || input.dailySteps < 4000) calculatedAgni = "Mandagni";
+    else if (primaryDosha === "Vata") calculatedAgni = "Vishamagni";
+    else if (primaryDosha === "Pitta") calculatedAgni = "Tikshnagni";
 
-    let matchedDisease: DiseaseProfile | null = null;
-    let maxMatches = 0;
+    // BULLETPROOF FIX: Use reduce instead of a let variable + loop. TypeScript cannot fail here.
+    const matchResult = DISEASES_LIBRARY.reduce<{ disease: DiseaseProfile | null; max: number }>(
+      (acc, currentDisease) => {
+        const intersections = currentDisease.cardinalSymptoms.filter(s => activeSymptoms.includes(s)).length;
+        if (intersections > acc.max) {
+          return { disease: currentDisease, max: intersections };
+        }
+        return acc;
+      },
+      { disease: null, max: 0 }
+    );
 
-    for (const disease of DISEASES_LIBRARY) {
-      const intersections = disease.cardinalSymptoms.filter((symptom) => 
-        activeSymptoms.includes(symptom)
-      ).length;
-      if (intersections > maxMatches) {
-        maxMatches = intersections;
-        matchedDisease = disease;
-      }
-    }
+    const activeDisease = matchResult.disease;
 
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    // Force TypeScript to compile cleanly by separating the logic
-    let safeFormulations: Formulation[] = [];
-    if (matchedDisease !== null && urgentFlags.length === 0) {
-        safeFormulations = matchedDisease.remedies.filter((remedy) => {
-          const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
+    const safeFormulations = (activeDisease !== null && urgentFlags.length === 0)
+      ? activeDisease.remedies.filter((remedy) => {
+          const hasHeavyMetals = remedy.ingredients.some(ing => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
-          const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
-          const matchesAllergy = remedy.ingredients.some((ing) => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
+          const normalizedAllergies = input.allergies.map(a => a.toLowerCase().trim());
+          const matchesAllergy = remedy.ingredients.some(ing => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
           const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
 
           return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
-        });
-    }
+        })
+      : [];
 
     let ahara = "Maintain a regular balanced, seasonal whole-food diet.";
     let vihara = "Target a consistent exercise routine. Daily movement goal: 7,500+ steps.";
@@ -92,18 +81,17 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    // Bypass TypeScript 'never' bug by using a standard IF block and any[] 
     const formattedProtocolMatches: any[] = [];
     
-    if (matchedDisease !== null && safeFormulations.length > 0) {
+    if (activeDisease !== null && safeFormulations.length > 0) {
         formattedProtocolMatches.push({
-          id: matchedDisease.id,
+          id: activeDisease.id,
           sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
           audience: "Adult " + primaryDosha + " Protocol",
-          matchKeywords: matchedDisease.cardinalSymptoms,
+          matchKeywords: activeDisease.cardinalSymptoms,
           goals: [ahara],
-          objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
-          sourceExcerpt: `Source Tracking: ${matchedDisease.diagnosticSource} | Formulation Framework.`,
+          objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
+          sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
           timing: "Post-Meal Chronobiology Sync",
           safetyNotes: [
             "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
@@ -123,7 +111,7 @@ export class ClassicalAyurvedicEngine {
     return {
       primaryDosha,
       calculatedAgni,
-      matchedDisease,
+      matchedDisease: activeDisease,
       safeFormulations,
       protocolMatches: formattedProtocolMatches, 
       lifestyleRegimen: { ahara, vihara }
