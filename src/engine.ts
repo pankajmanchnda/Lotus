@@ -12,7 +12,6 @@ export class ClassicalAyurvedicEngine {
     let pittaScore = 0;
     let kaphaScore = 0;
 
-    // Build fresh evaluation arrays from checkboxes ONLY
     const activeSymptoms = [...input.selectedSymptoms];
 
     activeSymptoms.forEach((symptom) => {
@@ -27,7 +26,6 @@ export class ClassicalAyurvedicEngine {
       }
     });
 
-    // Fallback to environmental climate vectors if no explicit checkboxes are selected
     if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
       switch (input.weatherType) {
         case 'Cold-Dry': vataScore += 1.5; break;
@@ -92,11 +90,10 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    // MAP THE PRISTINE REFUGE DATA DIRECTLY INTO YOUR PREFERRED CARD LAYOUT STRUCT
     const formattedProtocolMatches = matchedDisease && safeFormulations.length > 0 ? [{
       id: matchedDisease.id,
       sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
-      audience: ("Adult " + primaryDosha + " Protocol") as any,
+      audience: "Adult " + primaryDosha + " Protocol",
       matchKeywords: matchedDisease.cardinalSymptoms,
       goals: [ahara],
       objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
