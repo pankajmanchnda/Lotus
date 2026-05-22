@@ -30,6 +30,6 @@ export interface ClinicalModule {
   remedies: Remedy[];
 }
 
-// These exports fix your TS2305 error
+// These exports solve your "no exported member" error
 export type DiseaseProfile = ClinicalModule;
 export type Formulation = Remedy;
