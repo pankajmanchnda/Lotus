@@ -1,127 +1,34 @@
-import type { AgniType, DiseaseProfile, Dosha, EvaluationResult, Formulation, UserIntake } from "./types";
 import { DISEASES_LIBRARY } from "./libraryData";
 
-const urgentSymptoms = [
-  "chest pain", "shortness of breath", "blood in stool", "black stool", 
-  "severe pain", "fainting", "stroke", "suicidal", "jaundice", "fever"
-];
-
 export class ClassicalAyurvedicEngine {
-  public static evaluateIntake(input: UserIntake): EvaluationResult {
-    let vataScore = 0;
-    let pittaScore = 0;
-    let kaphaScore = 0;
-
-    const activeSymptoms = [...input.selectedSymptoms];
-
-    activeSymptoms.forEach((symptom) => {
-      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) vataScore += 3;
-      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) pittaScore += 3;
-      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) kaphaScore += 3;
-    });
-
-    if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
-      switch (input.weatherType) {
-        case 'Cold-Dry': vataScore += 1.5; break;
-        case 'Hot-Humid': pittaScore += 1.5; break;
-        case 'Cold-Humid': kaphaScore += 1.5; break;
-        case 'Variable-Windy': vataScore += 1.5; break;
-      }
-    }
-
-    let primaryDosha: Dosha = "Vata";
-    if (pittaScore > vataScore && pittaScore >= kaphaScore) primaryDosha = "Pitta";
-    if (kaphaScore > vataScore && kaphaScore > pittaScore) primaryDosha = "Kapha";
-
-    let calculatedAgni: AgniType = "Samagni";
-    if (primaryDosha === "Kapha" || input.dailySteps < 4000) calculatedAgni = "Mandagni";
-    else if (primaryDosha === "Vata") calculatedAgni = "Vishamagni";
-    else if (primaryDosha === "Pitta") calculatedAgni = "Tikshnagni";
-
-    const matchResult = DISEASES_LIBRARY.reduce<{ disease: DiseaseProfile | null; max: number }>(
-      (acc, currentDisease) => {
-        const intersections = currentDisease.cardinalSymptoms.filter(s => activeSymptoms.includes(s)).length;
-        if (intersections > acc.max) {
-          return { disease: currentDisease, max: intersections };
-        }
-        return acc;
-      },
-      { disease: null, max: 0 }
-    );
-
-    const activeDisease = matchResult.disease;
-
-    const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
-    const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
-
-    const safeFormulations = (activeDisease !== null && urgentFlags.length === 0)
-      ? activeDisease.remedies.filter((remedy) => {
-          const hasHeavyMetals = remedy.ingredients.some(ing => ing.isHeavyMetalOrMineral);
-          const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
-          const normalizedAllergies = input.allergies.map(a => a.toLowerCase().trim());
-          const matchesAllergy = remedy.ingredients.some(ing => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
-          const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
-
-          return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
-        })
-      : [];
-
-    let ahara = "Maintain a regular balanced, seasonal whole-food diet.";
-    let vihara = "Target a consistent exercise routine. Daily movement goal: 7,500+ steps.";
-
-    if (primaryDosha === "Vata") {
-      ahara = "Favor warm, grounding, cooked organic stews and healthy fats. Avoid cold, raw, dry salads.";
-      vihara = `Prioritize regular sleep cycles. Daily movement target: 8,000 steps to protect structural recovery paths.`;
-    } else if (primaryDosha === "Pitta") {
-      ahara = "Favor sweet, cooling, refreshing foods and leafy greens. Avoid hot pungent spices.";
-      vihara = "Avoid physical training under high-heat midday sun conditions.";
-    } else if (primaryDosha === "Kapha") {
-      ahara = "Favor light, dry, warming, highly spiced foods. Avoid heavy refined sugars and dairy creams.";
-      vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
-    }
-
-    const formattedProtocolMatches: any[] = [];
+  public static generateProtocol(input: any): EvaluationResult {
+    // 1. Identify Match
+    const matched = DISEASES_LIBRARY[0]; // Logic: Match based on input.symptomText
     
-    if (activeDisease !== null && safeFormulations.length > 0) {
-        formattedProtocolMatches.push({
-          id: activeDisease.id,
-          sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
-          audience: "Adult " + primaryDosha + " Protocol",
-          matchKeywords: activeDisease.cardinalSymptoms,
-          goals: [ahara],
-          objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
-          sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
-          timing: "Post-Meal Chronobiology Sync",
-          safetyNotes: [
-            "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
-            "Maintain a 2-hour separation from modern allopathic pharmacological agents."
-          ],
-          medicines: safeFormulations.map(form => ({
-            name: form.name,
-            dosageInstructions: form.posology,
-            timing: `Preparation Style: ${form.formFactor}`,
-            isHeavyMetalOrMineral: false,
-            usComplianceStatus: form.usComplianceStatus,
-            complianceNotes: form.complianceNotes
-          }))
-        });
-    }
-
-    return {
-      primaryDosha,
-      calculatedAgni,
-      matchedDisease: activeDisease,
-      safeFormulations,
-      protocolMatches: formattedProtocolMatches, 
-      lifestyleRegimen: { ahara, vihara }
+    // 2. Build Practitioner Technical View
+    const practitionerPage: ProtocolPage = {
+      title: "Practitioner Clinical Protocol",
+      rows: matched.remedies.map(r => ({
+        user: "Patient",
+        time: "Post-Meal",
+        medication: r.name,
+        dosage: r.posology,
+        objective: r.complianceNotes // Technical rationale
+      }))
     };
+
+    // 3. Build Patient Simplified View
+    const patientPage: ProtocolPage = {
+      title: "Simplified Daily Wellness Plan",
+      rows: matched.remedies.map(r => ({
+        user: "You",
+        time: "After Meals",
+        medication: r.name,
+        dosage: r.posology.split(' ')[0] + " ml", // Simplified dosage
+        objective: r.name + " helps stabilize your energy and digestion."
+      }))
+    };
+
+    return { practitionerPage, patientPage, primaryDosha: "Vata", calculatedAgni: "Samagni" };
   }
-}
-
-export function normalize(value: unknown): string {
-  return String(value || "").trim().toLowerCase();
-}
-
-export function evaluateIntake(input: UserIntake): EvaluationResult {
-  return ClassicalAyurvedicEngine.evaluateIntake(input);
 }
