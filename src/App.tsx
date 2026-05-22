@@ -6,7 +6,7 @@ import type { EvaluationResult, UserIntake, WeatherProfile } from "./types";
 
 export default function App() {
   const [intake, setIntake] = useState<UserIntake>({
-    age: 49, weight: 72, height: 172,
+    age: 38, weight: 72, height: 172,
     city: "San Francisco", country: "United States",
     weatherType: "Cold-Dry", dailySteps: 12000,
     selectedSymptoms: [], symptomText: "", goalsText: "", allergies: []
@@ -100,9 +100,30 @@ export default function App() {
               </select>
             </div>
 
+            {/* RESTORED FREE-TEXT INPUTS */}
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Additional Symptoms / Conditions</label>
+              <textarea
+                className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                placeholder="e.g., thyroid, blood pressure, fatigue, anxiety"
+                value={intake.symptomText}
+                onChange={(event) => setIntake({ ...intake, symptomText: event.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Health Goals</label>
+              <textarea
+                className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+                placeholder="e.g., get fit and active, reduce stress"
+                value={intake.goalsText}
+                onChange={(event) => setIntake({ ...intake, goalsText: event.target.value })}
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-2">Active Pathological Symptoms (Vikriti Select)</label>
-              <div className="space-y-2 max-h-56 overflow-y-auto border border-slate-800 p-2 rounded bg-slate-950">
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-800 p-2 rounded bg-slate-950">
                 {SYMPTOM_OPTIONS.map((symptom, idx) => {
                   const isChecked = intake.selectedSymptoms.includes(symptom);
                   return (
@@ -141,7 +162,7 @@ export default function App() {
           {!result ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center text-slate-500">
               <Layers className="h-12 w-12 mx-auto mb-4 stroke-1 text-slate-700" />
-              <p className="text-sm">Select checkboxes on the sidebar and run the verification sequence to extract formulations cleanly from the classical core database.</p>
+              <p className="text-sm">Enter your personalized symptoms and goals to generate a clinically matched protocol.</p>
             </div>
           ) : (
             <>
