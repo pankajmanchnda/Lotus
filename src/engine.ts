@@ -1,12 +1,12 @@
 import { DISEASES_LIBRARY } from "./libraryData";
-import { ClinicalModule } from "./types";
+import { ClinicalModule, Remedy } from "./types";
 
 export class ClassicalAyurvedicEngine {
   public static evaluateIntake(intake: any): any {
     const disease = DISEASES_LIBRARY.find((d: ClinicalModule) => d.id === "DIS-CONST-004");
     if (!disease) return null;
 
-    const rows = disease.remedies.map((r: any) => ({
+    const rows = disease.remedies.map((r: Remedy) => ({
       user: "Patient",
       time: "Post-Meal",
       medication: r.name,
