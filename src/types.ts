@@ -48,6 +48,28 @@ export interface DiseaseProfile {
   remedies: Formulation[];
 }
 
+// UPGRADE: Strongly typing the protocol medicine entry to catch compliance warnings automatically
+export interface ProtocolMedicineItem {
+  name: string;
+  dosageInstructions: string;
+  timing: string;
+  isHeavyMetalOrMineral: boolean; // Vital for the absolute safety gate
+  usComplianceStatus: "PASSED" | "FAILED";
+  complianceNotes: string;
+}
+
+export interface ProtocolRecommendation {
+  id: string;
+  sourceDocument: string;
+  audience: "Adult" | "Pediatric" | "Adult-Father" | "Adult-Mother";
+  matchKeywords: string[];
+  goals: string[];
+  medicines: ProtocolMedicineItem[]; // UPGRADED: Swapped from raw string[] to structured objects
+  objective: string;
+  safetyNotes: string[];
+  sourceExcerpt: string;
+}
+
 export interface EvaluationResult {
   primaryDosha: Dosha;
   calculatedAgni: AgniType;
@@ -58,19 +80,4 @@ export interface EvaluationResult {
     ahara: string;
     vihara: string;
   };
-}
-
-
-export interface ProtocolRecommendation {
-  id: string;
-  sourceDocument: string;
-  audience: "Adult" | "Pediatric" | "Adult-Father" | "Adult-Mother";
-  matchKeywords: string[];
-  goals: string[];
-  medicines: string[];
-  timing: string;
-  dosage: string;
-  objective: string;
-  safetyNotes: string[];
-  sourceExcerpt: string;
 }
