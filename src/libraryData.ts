@@ -28,7 +28,7 @@ export const DISEASES_LIBRARY: DiseaseProfile[] = [
     ]
   },
   {
-    id: "DIS-FATIGUE-IRON-005",
+    id: "DIS-NUTR-005",
     name: "Drakshasava Protocol",
     modernApproximation: "Fatigue / low vitality support",
     diagnosticSource: "Classical Draksha-based restorative protocol",

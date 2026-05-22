@@ -2,10 +2,10 @@ import { DISEASES_LIBRARY } from "./libraryData";
 import type { AgniType, ClinicalModule, EvaluationResult, ProtocolRow, Remedy, UserIntake } from "./types";
 
 const semanticMap: Record<string, string[]> = {
-  iron: ["DIS-FATIGUE-IRON-005"],
-  anemia: ["DIS-FATIGUE-IRON-005"],
-  fatigue: ["DIS-FATIGUE-IRON-005", "DIS-PAIN-RECOVERY-007"],
-  weakness: ["DIS-FATIGUE-IRON-005"],
+  iron: ["DIS-NUTR-005"],
+  anemia: ["DIS-NUTR-005"],
+  fatigue: ["DIS-NUTR-005", "DIS-PAIN-RECOVERY-007"],
+  weakness: ["DIS-NUTR-005"],
   insomnia: ["DIS-MEMORY-SLEEP-006", "DIS-PAIN-RECOVERY-007"],
   sleep: ["DIS-MEMORY-SLEEP-006", "DIS-PAIN-RECOVERY-007"],
   anxiety: ["DIS-MEMORY-SLEEP-006"],

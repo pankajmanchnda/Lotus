@@ -99,6 +99,17 @@ export default function App() {
 
               <h3 className="mt-6 text-lg font-bold text-cyan-300">{result.patientPage.title}</h3>
               <p className="mt-2 text-sm text-slate-300">{result.patientPage.summary}</p>
+              <div className="mt-3 space-y-3">
+                {result.patientPage.rows.map((row, index) => (
+                  <article key={`patient-${row.medication}-${index}`} className="rounded border border-slate-800 bg-slate-950 p-4">
+                    <h4 className="font-bold text-cyan-300">{row.medication}</h4>
+                    <p className="mt-1 text-sm text-slate-300">How to take: {row.dosage}</p>
+                    <p className="mt-1 text-sm text-slate-300">When: {row.time}</p>
+                    <p className="mt-1 text-sm text-slate-400">Why: {row.objective}</p>
+                    <p className="mt-1 text-xs text-amber-300">Safety: {row.safety}</p>
+                  </article>
+                ))}
+              </div>
             </div>
           )}
         </section>
