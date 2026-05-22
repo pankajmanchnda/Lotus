@@ -1,4 +1,4 @@
-import type { AgniType, DiseaseProfile, Dosha, EvaluationResult, Formulation, UserIntake } from "./types";
+import type { AgniType, DiseaseProfile, Dosha, EvaluationResult, Formulation, UserIntake, ProtocolRecommendation } from "./types";
 import { DISEASES_LIBRARY, FAMILY_PROTOCOL_LIBRARY, FORMULATIONS_LIBRARY } from "./libraryData";
 
 const urgentSymptoms = [
@@ -26,37 +26,56 @@ export class ClassicalAyurvedicEngine {
     let pittaScore = 0;
     let kaphaScore = 0;
 
+    const tokenizedSymptoms = tokenizeFreeText(input.symptomText);
+    const tokenizedGoals = tokenizeFreeText(input.goalsText);
+
     const expandedSymptoms = [
       ...input.selectedSymptoms,
-      ...tokenizeFreeText(input.symptomText),
-      ...tokenizeFreeText(input.goalsText)
+      ...tokenizedSymptoms,
+      ...tokenizedGoals
     ];
 
     expandedSymptoms.forEach((symptom) => {
-      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) {
+      const norm = normalize(symptom);
+      
+      // Vata Vector Assignments
+      if (["alternating constipation & diarrhea", "mucus in stool", "abdominal gurgling & mild pain", "constipation", "bloating", "gas"].some(match => norm.includes(match))) {
         vataScore += 3;
       }
-
-      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) {
+      // Pitta Vector Assignments
+      if (["heartburn & burning sensation", "acid reflux after meals", "nausea & sour eructations", "acidity", "reflux", "burning"].some(match => norm.includes(match))) {
         pittaScore += 3;
       }
-
-      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) {
+      // Kapha Vector Assignments
+      if (["lethargy & heaviness in stomach", "slow digestion & weight retention", "white tongue coating & brain fog", "sluggish", "heaviness"].some(match => norm.includes(match))) {
         kaphaScore += 3;
       }
     });
 
-    // Determine baseline primary imbalance vector.
+    // RULE OF TEXT HIERARCHY PRIORITIZATION: 
+    // Acute symptoms override geographic baseline climate impact scores. 
+    // Environmental scores are applied only as balancing tie-breakers.
+    if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
+      switch (input.weatherType) {
+        case 'Cold-Dry': vataScore += 1.5; break;
+        case 'Hot-Humid': pittaScore += 1.5; break;
+        case 'Cold-Humid': kaphaScore += 1.5; break;
+        case 'Variable-Windy': vataScore += 1.5; break;
+      }
+    }
+
+    // Determine baseline primary imbalance vector
     let primaryDosha: Dosha = "Vata";
     if (pittaScore > vataScore && pittaScore >= kaphaScore) primaryDosha = "Pitta";
     if (kaphaScore > vataScore && kaphaScore > pittaScore) primaryDosha = "Kapha";
 
-    // 2. Compute Metabolic Capacity (Agni) via Biometrics & Activity
+    // 2. Compute Metabolic Capacity (Agni) via Biometrics & Activity Tracking Data
     let calculatedAgni: AgniType = "Samagni";
     if (primaryDosha === "Kapha" || input.dailySteps < 4000) {
       calculatedAgni = "Mandagni";
     } else if (primaryDosha === "Vata") {
-      calculatedAgni = "Vishamagni";
+      // High physical activity over 12,000 steps balances stagnant Kapha but can fluctuate Vata digestion
+      calculatedAgni = input.dailySteps > 12000 ? "Vishamagni" : "Vishamagni";
     } else if (primaryDosha === "Pitta") {
       calculatedAgni = "Tikshnagni";
     }
@@ -81,95 +100,7 @@ export class ClassicalAyurvedicEngine {
     // 4. Query & Filter Remedies from Library (Applying Safety Gates)
     const safeFormulations = matchedDisease && urgentFlags.length === 0
       ? (matchedDisease as DiseaseProfile).remedies.filter((remedy) => {
-          // Rule 1: Exclude heavy metals or minerals completely.
           const hasHeavyMetals = remedy.ingredients.some((ingredient) => ingredient.isHeavyMetalOrMineral);
-          // Rule 2: Ensure compatibility with calculated Agni status to prevent indigestion.
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
-          // Rule 3: Exclude user allergies.
-          const normalizedAllergies = input.allergies.map((allergy) => allergy.toLowerCase());
-          const matchesAllergy = remedy.ingredients.some((ingredient) => normalizedAllergies.includes(ingredient.name.toLowerCase()));
-          // Rule 4: Exclude any entry that has not passed the U.S. compliance screen.
-          const isUsCompliant = remedy.usComplianceStatus === "PASSED";
-
-          return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && isUsCompliant;
-        })
-      : [];
-
-    // 5. Generate Tailored Diet & Lifestyle Guidelines (Ahara / Vihara)
-    let ahara = "Maintain a regular balanced, seasonal whole-food diet.";
-    let vihara = "Target a consistent exercise routine. Daily movement goal: 7,500+ steps.";
-
-    if (primaryDosha === "Vata") {
-      ahara = "Favor warm, grounding, cooked organic stews and healthy fats. Avoid cold, raw, dry salads.";
-      vihara = "Prioritize regular sleep cycles, warm oil self-massage (Abhyanga), and mild grounding exercise.";
-    } else if (primaryDosha === "Pitta") {
-      ahara = "Favor sweet, cooling, refreshing foods and leafy greens. Avoid hot spices, excessive vinegars, and citrus.";
-      vihara = "Avoid physical exercise under high-heat midday sun. Practice cooling breathing protocols (Shitali Pranayama).";
-    } else if (primaryDosha === "Kapha") {
-      ahara = "Favor light, dry, warming, highly spiced foods. Avoid heavy dairy creams, cold iced drinks, and oily sweets.";
-      vihara = "Engage in invigorating aerobic activity. Wake up early in the morning and avoid daytime sleeping.";
-    }
-
-    const protocolMatches = matchFamilyProtocols(input);
-
-    return {
-      primaryDosha,
-      calculatedAgni,
-      matchedDisease,
-      safeFormulations,
-      protocolMatches,
-      lifestyleRegimen: { ahara, vihara }
-    };
-  }
-}
-
-export function normalize(value: unknown): string {
-  return String(value || "").trim().toLowerCase();
-}
-
-export function findUrgentFlags(intake: UserIntake): string[] {
-  const haystack = normalize([
-    ...intake.selectedSymptoms,
-    intake.symptomText,
-    intake.goalsText,
-    ...intake.allergies
-  ].join(" "));
-  return urgentSymptoms.filter((symptom) => haystack.includes(symptom));
-}
-
-function tokenizeFreeText(value: string): string[] {
-  return normalize(value)
-    .split(/[,;\n]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-export function matchFamilyProtocols(intake: UserIntake) {
-  const haystack = normalize([
-    ...intake.selectedSymptoms,
-    intake.symptomText,
-    intake.goalsText
-  ].join(" "));
-
-  return FAMILY_PROTOCOL_LIBRARY.filter((protocol) => {
-    const keywordHit = protocol.matchKeywords.some((keyword) => haystack.includes(normalize(keyword)));
-    const goalHit = protocol.goals.some((goal) => haystack.includes(normalize(goal)));
-    const pediatricMismatch = protocol.audience === "Pediatric" && intake.age >= 18;
-
-    return (keywordHit || goalHit) && !pediatricMismatch;
-  });
-}
-
-export function searchLibrary(query: string): Formulation[] {
-  const normalized = normalize(query);
-
-  if (!normalized) {
-    return FORMULATIONS_LIBRARY;
-  }
-
-  return FORMULATIONS_LIBRARY.filter((formulation) => normalize(JSON.stringify(formulation)).includes(normalized));
-}
-
-export function evaluateIntake(input: UserIntake): EvaluationResult {
-  return ClassicalAyurvedicEngine.evaluateIntake(input);
-}
+          
+          const normalizedAllergies = input.allergies.map((allergy) =>
