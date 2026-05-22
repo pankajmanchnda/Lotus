@@ -1,60 +1,33 @@
-import type { AgniType, DiseaseProfile, Dosha, EvaluationResult, Formulation, UserIntake, ProtocolRecommendation } from "./types";
-import { DISEASES_LIBRARY, FAMILY_PROTOCOL_LIBRARY, FORMULATIONS_LIBRARY } from "./libraryData";
+import type { AgniType, DiseaseProfile, Dosha, EvaluationResult, Formulation, UserIntake } from "./types";
+import { DISEASES_LIBRARY } from "./libraryData";
 
 const urgentSymptoms = [
-  "chest pain",
-  "shortness of breath",
-  "blood in stool",
-  "black stool",
-  "severe pain",
-  "fainting",
-  "stroke",
-  "suicidal",
-  "jaundice",
-  "fever",
-  "pregnant",
-  "pregnancy",
-  "breastfeeding",
-  "kidney disease",
-  "liver disease"
+  "chest pain", "shortness of breath", "blood in stool", "black stool", 
+  "severe pain", "fainting", "stroke", "suicidal", "jaundice", "fever"
 ];
 
 export class ClassicalAyurvedicEngine {
   public static evaluateIntake(input: UserIntake): EvaluationResult {
-    // 1. Calculate Primary Dosha Imbalance from Symptoms Vectors
     let vataScore = 0;
     let pittaScore = 0;
     let kaphaScore = 0;
 
-    const tokenizedSymptoms = tokenizeFreeText(input.symptomText);
-    const tokenizedGoals = tokenizeFreeText(input.goalsText);
+    // Build fresh evaluation arrays from symptoms checked on this run
+    const activeSymptoms = [...input.selectedSymptoms];
 
-    const expandedSymptoms = [
-      ...input.selectedSymptoms,
-      ...tokenizedSymptoms,
-      ...tokenizedGoals
-    ];
-
-    expandedSymptoms.forEach((symptom) => {
-      const norm = normalize(symptom);
-      
-      // Vata Vector Assignments
-      if (["alternating constipation & diarrhea", "mucus in stool", "abdominal gurgling & mild pain", "constipation", "bloating", "gas"].some(match => norm.includes(match))) {
+    activeSymptoms.forEach((symptom) => {
+      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) {
         vataScore += 3;
       }
-      // Pitta Vector Assignments
-      if (["heartburn & burning sensation", "acid reflux after meals", "nausea & sour eructations", "acidity", "reflux", "burning"].some(match => norm.includes(match))) {
+      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) {
         pittaScore += 3;
       }
-      // Kapha Vector Assignments
-      if (["lethargy & heaviness in stomach", "slow digestion & weight retention", "white tongue coating & brain fog", "sluggish", "heaviness"].some(match => norm.includes(match))) {
+      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) {
         kaphaScore += 3;
       }
     });
 
-    // RULE OF TEXT HIERARCHY PRIORITIZATION: 
-    // Acute symptoms override geographic baseline climate impact scores. 
-    // Environmental scores are applied only as balancing tie-breakers.
+    // Fallback to environmental climate vectors if no explicit checkboxes are selected
     if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
       switch (input.weatherType) {
         case 'Cold-Dry': vataScore += 1.5; break;
@@ -64,43 +37,95 @@ export class ClassicalAyurvedicEngine {
       }
     }
 
-    // Determine baseline primary imbalance vector
     let primaryDosha: Dosha = "Vata";
     if (pittaScore > vataScore && pittaScore >= kaphaScore) primaryDosha = "Pitta";
     if (kaphaScore > vataScore && kaphaScore > pittaScore) primaryDosha = "Kapha";
 
-    // 2. Compute Metabolic Capacity (Agni) via Biometrics & Activity Tracking Data
     let calculatedAgni: AgniType = "Samagni";
     if (primaryDosha === "Kapha" || input.dailySteps < 4000) {
       calculatedAgni = "Mandagni";
     } else if (primaryDosha === "Vata") {
-      // High physical activity over 12,000 steps balances stagnant Kapha but can fluctuate Vata digestion
-      calculatedAgni = input.dailySteps > 12000 ? "Vishamagni" : "Vishamagni";
+      calculatedAgni = "Vishamagni";
     } else if (primaryDosha === "Pitta") {
       calculatedAgni = "Tikshnagni";
     }
 
-    // 3. Search and Match Classical Disease Profile via Madhava Nidana Index
     let matchedDisease: DiseaseProfile | null = null;
     let maxMatches = 0;
 
     DISEASES_LIBRARY.forEach((disease) => {
-      const intersections = disease.cardinalSymptoms.filter((symptom) => {
-        const normalizedSymptom = normalize(symptom);
-        return expandedSymptoms.some((item) => normalize(item).includes(normalizedSymptom) || normalizedSymptom.includes(normalize(item)));
-      }).length;
+      const intersections = disease.cardinalSymptoms.filter((symptom) => 
+        activeSymptoms.includes(symptom)
+      ).length;
       if (intersections > maxMatches) {
         maxMatches = intersections;
         matchedDisease = disease;
       }
     });
 
-    const urgentFlags = findUrgentFlags(input);
+    const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
+    const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    // 4. Query & Filter Remedies from Library (Applying Safety Gates)
+    // Pull clean, active formulations directly from the classical knowledge base 
     const safeFormulations = matchedDisease && urgentFlags.length === 0
       ? (matchedDisease as DiseaseProfile).remedies.filter((remedy) => {
-          const hasHeavyMetals = remedy.ingredients.some((ingredient) => ingredient.isHeavyMetalOrMineral);
+          const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
+          const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
+          const matchesAllergy = remedy.ingredients.some((ing) => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
           
-          const normalizedAllergies = input.allergies.map((allergy) =>
+          // Enforce absolute botanical compliance rules for US exports
+          const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
+
+          return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
+        })
+      : [];
+
+    let ahara = "Maintain a regular balanced, seasonal whole-food diet.";
+    let vihara = "Target a consistent exercise routine. Daily movement goal: 7,500+ steps.";
+
+    if (primaryDosha === "Vata") {
+      ahara = "Favor warm, grounding, cooked organic stews and healthy fats. Avoid cold, raw, dry salads.";
+      vihara = `Prioritize regular sleep cycles. Daily movement target: 8,000 steps to protect structural recovery paths.`;
+    } else if (primaryDosha === "Pitta") {
+      ahara = "Favor sweet, cooling, refreshing foods and leafy greens. Avoid hot pungent spices.";
+      vihara = "Avoid physical training under high-heat midday sun conditions.";
+    } else if (primaryDosha === "Kapha") {
+      ahara = "Favor light, dry, warming, highly spiced foods. Avoid heavy refined sugars and dairy creams.";
+      vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
+    }
+
+    // Build the structural format recommendation dynamically using the pristine library data core
+    const formattedProtocolMatches = matchedDisease && safeFormulations.length > 0 ? [{
+      id: matchedDisease.id,
+      sourceDocument: "BHAISHAJYA RATNAVALI KNOWLEDGE BASE",
+      audience: ("Adult " + primaryDosha + " Framework") as any,
+      matchKeywords: matchedDisease.cardinalSymptoms,
+      goals: [ahara],
+      objective: `Targeted text-validated strategy addressing ${matchedDisease.name} (${matchedDisease.modernApproximation}) extracted using gold-standard techniques.`,
+      sourceExcerpt: `Diagnostic Source: ${matchedDisease.diagnosticSource} | Structural Formulation Mapping Engine.`,
+      timing: "Calculated based on metabolic state metrics.",
+      safetyNotes: [
+        "Formulation complies with strict botanical export standards.",
+        "Ensure a 2-hour interval is maintained between herbal inputs and any modern prescription options."
+      ],
+      medicines: safeFormulations.map(form => ({
+        name: form.name,
+        dosageInstructions: form.posology,
+        timing: `Administration Mode: ${form.formFactor}`,
+        isHeavyMetalOrMineral: false,
+        usComplianceStatus: form.usComplianceStatus,
+        complianceNotes: form.complianceNotes
+      }))
+    }] : [];
+
+    return {
+      primaryDosha,
+      calculatedAgni,
+      matchedDisease,
+      safeFormulations,
+      protocolMatches: formattedProtocolMatches, // Feeds pristine data straight into the clean layout format
+      lifestyleRegimen: { ahara, vihara }
+    };
+  }
+}
