@@ -1,14 +1,16 @@
 import React, { useState } from "react";
-import { Activity, BookOpen, Layers, RefreshCw, Clock, SmartphoneNfc, CheckCircle2 } from "lucide-react";
+import { Activity, BookOpen, Layers, RefreshCw, Clock, SmartphoneNfc, CheckCircle2, Download } from "lucide-react";
 import { ClassicalAyurvedicEngine } from "./engine";
 import { SYMPTOM_OPTIONS } from "./libraryData";
 import type { EvaluationResult, UserIntake, WeatherProfile } from "./types";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 export default function App() {
   const [intake, setIntake] = useState<UserIntake>({
-    age: 38, weight: 72, height: 172,
-    city: "San Francisco", country: "United States",
-    weatherType: "Cold-Dry", dailySteps: 0, // Starts at 0 until synced
+    age: 49, weight: 72, height: 172,
+    city: "Las Vegas", country: "United States",
+    weatherType: "Hot-Humid", dailySteps: 0, 
     selectedSymptoms: [], symptomText: "", goalsText: "", allergies: []
   });
 
@@ -16,15 +18,12 @@ export default function App() {
   const [allergyInput, setAllergyInput] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncComplete, setSyncComplete] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  // Simulated API Fetch from a Wearable Device
   const handleSyncDevice = () => {
     setIsSyncing(true);
     setSyncComplete(false);
-    
-    // Simulate a 1.5-second network delay to an API
     setTimeout(() => {
-      // Generate realistic daily steps between 4,000 and 14,000
       const simulatedSteps = Math.floor(Math.random() * (14000 - 4000 + 1)) + 4000;
       setIntake(prev => ({ ...prev, dailySteps: simulatedSteps }));
       setIsSyncing(false);
@@ -58,15 +57,59 @@ export default function App() {
     setResult(ClassicalAyurvedicEngine.evaluateIntake(intake));
   };
 
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      // Capture the element as a high-res image
+      const canvas = await html2canvas(element, { 
+        scale: 2, 
+        backgroundColor: "#020617", // Matches your slate-950 background
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      
+      // Calculate PDF dimensions (A4 paper size)
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Add padding and inject the image
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Ananta_Protocol_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error("PDF Generation failed", error);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <header className="max-w-6xl mx-auto mb-8 border-b border-slate-800 pb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight text-emerald-400 flex items-center gap-3">
-          <BookOpen className="h-8 w-8" /> Ananta Classical Ayurveda Core Engine
-        </h1>
-        <p className="text-sm text-slate-400 mt-2">
-          Automated multi-text verification framework using [MN] Madhava Nidana, [BR] Bhaishajya Ratnavali, [BP] Bhava Prakasha, and [SHA] Sharngadhara Samhita.
-        </p>
+      <header className="max-w-6xl mx-auto mb-8 border-b border-slate-800 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-emerald-400 flex items-center gap-3">
+            <BookOpen className="h-8 w-8" /> Ananta Classical Ayurveda Core Engine
+          </h1>
+          <p className="text-sm text-slate-400 mt-2">
+            Automated multi-text verification framework using [MN], [BR], [BP], and [SHA].
+          </p>
+        </div>
+        {result && (
+          <button 
+            onClick={handleDownloadPDF} 
+            disabled={isGeneratingPDF}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${isGeneratingPDF ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-slate-950 shadow-lg hover:shadow-emerald-900/50'}`}
+          >
+            {isGeneratingPDF ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {isGeneratingPDF ? "Generating PDF..." : "Download Protocol"}
+          </button>
+        )}
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -102,7 +145,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* NEW WEARABLE API INTEGRATION BLOCK */}
             <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
               <label className="block text-xs font-bold tracking-wider text-slate-400 mb-2 uppercase">Biometric Telemetry</label>
               <div className="flex items-center gap-3">
@@ -111,13 +153,7 @@ export default function App() {
                   disabled={isSyncing}
                   className={`flex items-center gap-2 px-4 py-2 rounded text-xs font-bold transition-all ${isSyncing ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : syncComplete ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-800' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'}`}
                 >
-                  {isSyncing ? (
-                    <><RefreshCw className="h-4 w-4 animate-spin" /> Fetching...</>
-                  ) : syncComplete ? (
-                    <><CheckCircle2 className="h-4 w-4" /> Device Synced</>
-                  ) : (
-                    <><SmartphoneNfc className="h-4 w-4" /> Sync Wearable</>
-                  )}
+                  {isSyncing ? <><RefreshCw className="h-4 w-4 animate-spin" /> Fetching...</> : syncComplete ? <><CheckCircle2 className="h-4 w-4" /> Device Synced</> : <><SmartphoneNfc className="h-4 w-4" /> Sync Wearable</>}
                 </button>
                 <div className="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-center">
                   <span className="block text-[10px] text-slate-500 uppercase tracking-widest">Daily Steps</span>
@@ -163,21 +199,6 @@ export default function App() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Allergies Registry</label>
-              <form onSubmit={addAllergy} className="flex gap-2 mb-2">
-                <input className="flex-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-slate-100 focus:outline-none" type="text" placeholder="e.g., Honey, Lactose" value={allergyInput} onChange={(e) => setAllergyInput(e.target.value)} />
-                <button type="submit" className="bg-slate-700 hover:bg-slate-600 px-3 rounded text-xs font-bold">Add</button>
-              </form>
-              <div className="flex flex-wrap gap-1">
-                {intake.allergies.map((allergy, i) => (
-                  <span key={i} className="bg-red-950/40 border border-red-900/60 text-red-400 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
-                    {allergy} <button type="button" onClick={() => removeAllergy(i)} className="hover:text-red-200 ml-1">×</button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
             <button type="button" onClick={handleEvaluate} className="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 px-4 rounded-lg text-sm tracking-wide transition flex items-center justify-center gap-2 shadow-lg">
               <RefreshCw className="h-4 w-4" /> Run Verification Sequence
             </button>
@@ -191,7 +212,8 @@ export default function App() {
               <p className="text-sm">Enter your personalized symptoms and goals to generate a clinically matched protocol.</p>
             </div>
           ) : (
-            <>
+            // WRAPPED IN ID FOR PDF EXPORT
+            <div id="pdf-content" className="space-y-6 bg-slate-950 p-2 md:p-6 rounded-xl">
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-3 text-slate-200">Algorithmic Diagnostics Summary</h3>
                 <div className="grid grid-cols-2 gap-4 mt-4">
@@ -209,69 +231,11 @@ export default function App() {
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-4 text-slate-200">Text-Validated Action Protocols</h3>
                 {result.protocolMatches.length === 0 ? (
-                  <p className="text-sm text-slate-500 mt-4 italic">No disease matched. Ensure relevant symptom criteria checkboxes are marked on the intake dashboard.</p>
+                  <p className="text-sm text-slate-500 mt-4 italic">No disease matched. Ensure relevant symptom criteria checkboxes are marked.</p>
                 ) : (
                   <div className="space-y-5 mt-4">
                     {result.protocolMatches.map((protocol) => (
                       <div key={protocol.id} className="bg-slate-950 border border-slate-800 rounded-lg p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                           <h4 className="text-md font-bold text-emerald-400">{protocol.audience}</h4>
-                          <span className="text-[10px] font-mono tracking-wide text-slate-400 bg-slate-900 px-2 py-1 border border-slate-800 rounded">
-                            {protocol.sourceDocument}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-300 mb-4">{protocol.objective}</p>
-                        
-                        <div className="space-y-3 mb-4">
-                          <span className="block font-bold text-xs text-slate-400 uppercase tracking-wider">Active Formulation Parameters</span>
-                          <div className="grid grid-cols-1 gap-3">
-                            {protocol.medicines.map((med, idx) => (
-                              <div key={idx} className="p-3 rounded-lg border bg-slate-900 border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-sm text-slate-200">{med.name}</span>
-                                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-bold tracking-wide">Approved Export Matrix</span>
-                                  </div>
-                                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                    <Clock className="h-3 w-3 text-slate-500" /> {med.dosageInstructions} • <strong className="text-slate-300">{med.timing}</strong>
-                                  </p>
-                                </div>
-                                <div className="text-[11px] max-w-sm font-sans text-emerald-400 bg-slate-950/50 p-2 rounded border border-slate-950 md:text-right">
-                                  {med.complianceNotes}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-900 border border-slate-800/80 rounded-lg p-3 text-[11px] text-slate-400 space-y-1">
-                          <strong className="text-amber-400 uppercase tracking-wider text-[10px] block">Compendium Safety Overlays:</strong>
-                          {protocol.safetyNotes.map((note, i) => <p key={i}>• {note}</p>)}
-                        </div>
-                        <p className="text-[10px] font-mono text-slate-600 mt-3 italic">{protocol.sourceExcerpt}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-                <h3 className="text-lg font-bold border-b border-slate-800 pb-3 text-slate-200">Daily Seasonal Guidelines</h3>
-                <div className="space-y-3 mt-4 text-sm">
-                  <div className="p-3 bg-slate-950 border border-slate-800 rounded">
-                    <strong className="text-amber-400 block mb-1 text-xs uppercase tracking-wider">Ahara (Dietary Strategy)</strong>
-                    <p className="text-slate-300">{result.lifestyleRegimen.ahara}</p>
-                  </div>
-                  <div className="p-3 bg-slate-950 border border-slate-800 rounded">
-                    <strong className="text-cyan-400 block mb-1 text-xs uppercase tracking-wider">Vihara (Lifestyle Output)</strong>
-                    <p className="text-slate-300">{result.lifestyleRegimen.vihara}</p>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
-      </main>
-    </div>
-  );
-}
+                          <span className="text-[10px] font-mono tracking-wide text-slate-400 bg-slate-900 px-2 py-
