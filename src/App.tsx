@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity, BookOpen, CheckCircle2, Layers, RefreshCw, ShieldAlert, AlertTriangle, Clock } from "lucide-react";
+import { Activity, BookOpen, CheckCircle2, Layers, RefreshCw, ShieldAlert, Clock } from "lucide-react";
 import { ClassicalAyurvedicEngine } from "./engine";
 import { SYMPTOM_OPTIONS } from "./libraryData";
 import type { EvaluationResult, UserIntake, WeatherProfile } from "./types";
@@ -121,7 +121,7 @@ export default function App() {
                 <input className="flex-1 bg-slate-800 border border-slate-700 rounded p-1.5 text-xs text-slate-100 focus:outline-none" type="text" placeholder="e.g., Honey, Lactose" value={allergyInput} onChange={(e) => setAllergyInput(e.target.value)} />
                 <button type="submit" className="bg-slate-700 hover:bg-slate-600 px-3 rounded text-xs font-bold">Add</button>
               </form>
-              <div class="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1">
                 {intake.allergies.map((allergy, i) => (
                   <span key={i} className="bg-red-950/40 border border-red-900/60 text-red-400 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
                     {allergy} <button type="button" onClick={() => removeAllergy(i)} className="hover:text-red-200 ml-1">×</button>
@@ -136,12 +136,12 @@ export default function App() {
           </div>
         </section>
 
-        {/* Dynamic Treatment Dashboard Render Target */}
+        {/* Output Diagnostics Panels */}
         <section className="lg:col-span-7 space-y-6">
           {!result ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center text-slate-500">
               <Layers className="h-12 w-12 mx-auto mb-4 stroke-1 text-slate-700" />
-              <p className="text-sm">Select symptoms to fetch formulations fresh from the core Ayurvedic library database.</p>
+              <p className="text-sm">Select checkboxes on the sidebar and run the verification sequence to extract formulations cleanly from the classical core database.</p>
             </div>
           ) : (
             <>
@@ -160,11 +160,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Verified Protocols View Container using the Upgraded Layout Profile */}
+              {/* Verified Clinical Action Framework Cards (Replacing Old PDF String Rendering Entirely) */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-4 text-slate-200">Text-Validated Action Protocols</h3>
                 {result.protocolMatches.length === 0 ? (
-                  <p className="text-sm text-slate-500 mt-4 italic">Select symptoms from the sidebar panel to generate clean, text-mapped formulation frameworks.</p>
+                  <p className="text-sm text-slate-500 mt-4 italic">No disease matched. Ensure relevant symptom criteria checkboxes are marked on the intake dashboard.</p>
                 ) : (
                   <div className="space-y-5 mt-4">
                     {result.protocolMatches.map((protocol) => (
@@ -191,7 +191,7 @@ export default function App() {
                                     <Clock className="h-3 w-3 text-slate-500" /> {med.dosageInstructions} • <strong className="text-slate-300">{med.timing}</strong>
                                   </p>
                                 </div>
-                                <div className="text-[11px] max-w-sm font-sans text-emerald-500/90 bg-slate-950/50 p-2 rounded border border-slate-950 md:text-right">
+                                <div className="text-[11px] max-w-sm font-sans text-emerald-400 bg-slate-950/50 p-2 rounded border border-slate-950 md:text-right">
                                   {med.complianceNotes}
                                 </div>
                               </div>
@@ -210,7 +210,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Lifestyle Directive Framework */}
+              {/* Lifestyle Panels */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 className="text-lg font-bold border-b border-slate-800 pb-3 text-slate-200">Daily Seasonal Guidelines</h3>
                 <div className="space-y-3 mt-4 text-sm">
