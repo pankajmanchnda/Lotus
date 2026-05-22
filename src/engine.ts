@@ -15,15 +15,9 @@ export class ClassicalAyurvedicEngine {
     const activeSymptoms = [...input.selectedSymptoms];
 
     activeSymptoms.forEach((symptom) => {
-      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) {
-        vataScore += 3;
-      }
-      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) {
-        pittaScore += 3;
-      }
-      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) {
-        kaphaScore += 3;
-      }
+      if (["Alternating Constipation & Diarrhea", "Mucus in Stool", "Abdominal Gurgling & Mild Pain"].includes(symptom)) vataScore += 3;
+      if (["Heartburn & Burning Sensation", "Acid Reflux after Meals", "Nausea & Sour Eructations"].includes(symptom)) pittaScore += 3;
+      if (["Lethargy & Heaviness in Stomach", "Slow Digestion & Weight Retention", "White Tongue Coating & Brain Fog"].includes(symptom)) kaphaScore += 3;
     });
 
     if (vataScore === 0 && pittaScore === 0 && kaphaScore === 0) {
@@ -40,36 +34,32 @@ export class ClassicalAyurvedicEngine {
     if (kaphaScore > vataScore && kaphaScore > pittaScore) primaryDosha = "Kapha";
 
     let calculatedAgni: AgniType = "Samagni";
-    if (primaryDosha === "Kapha" || input.dailySteps < 4000) {
-      calculatedAgni = "Mandagni";
-    } else if (primaryDosha === "Vata") {
-      calculatedAgni = "Vishamagni";
-    } else if (primaryDosha === "Pitta") {
-      calculatedAgni = "Tikshnagni";
-    }
+    if (primaryDosha === "Kapha" || input.dailySteps < 4000) calculatedAgni = "Mandagni";
+    else if (primaryDosha === "Vata") calculatedAgni = "Vishamagni";
+    else if (primaryDosha === "Pitta") calculatedAgni = "Tikshnagni";
 
-    let matchedDisease: DiseaseProfile | null = null;
-    let maxMatches = 0;
+    const matchResult = DISEASES_LIBRARY.reduce<{ disease: DiseaseProfile | null; max: number }>(
+      (acc, currentDisease) => {
+        const intersections = currentDisease.cardinalSymptoms.filter(s => activeSymptoms.includes(s)).length;
+        if (intersections > acc.max) {
+          return { disease: currentDisease, max: intersections };
+        }
+        return acc;
+      },
+      { disease: null, max: 0 }
+    );
 
-    DISEASES_LIBRARY.forEach((disease) => {
-      const intersections = disease.cardinalSymptoms.filter((symptom) => 
-        activeSymptoms.includes(symptom)
-      ).length;
-      if (intersections > maxMatches) {
-        maxMatches = intersections;
-        matchedDisease = disease;
-      }
-    });
+    const activeDisease = matchResult.disease;
 
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    const safeFormulations = matchedDisease && urgentFlags.length === 0
-      ? (matchedDisease as DiseaseProfile).remedies.filter((remedy) => {
-          const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
+    const safeFormulations = (activeDisease !== null && urgentFlags.length === 0)
+      ? activeDisease.remedies.filter((remedy) => {
+          const hasHeavyMetals = remedy.ingredients.some(ing => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
-          const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
-          const matchesAllergy = remedy.ingredients.some((ing) => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
+          const normalizedAllergies = input.allergies.map(a => a.toLowerCase().trim());
+          const matchesAllergy = remedy.ingredients.some(ing => normalizedAllergies.includes(ing.name.toLowerCase().trim()));
           const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
 
           return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
@@ -90,33 +80,37 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    const formattedProtocolMatches = matchedDisease && safeFormulations.length > 0 ? [{
-      id: matchedDisease.id,
-      sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
-      audience: "Adult " + primaryDosha + " Protocol",
-      matchKeywords: matchedDisease.cardinalSymptoms,
-      goals: [ahara],
-      objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
-      sourceExcerpt: `Source Tracking: ${matchedDisease.diagnosticSource} | Formulation Framework.`,
-      timing: "Post-Meal Chronobiology Sync",
-      safetyNotes: [
-        "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
-        "Maintain a 2-hour separation from modern allopathic pharmacological agents."
-      ],
-      medicines: safeFormulations.map(form => ({
-        name: form.name,
-        dosageInstructions: form.posology,
-        timing: `Preparation Style: ${form.formFactor}`,
-        isHeavyMetalOrMineral: false,
-        usComplianceStatus: form.usComplianceStatus,
-        complianceNotes: form.complianceNotes
-      }))
-    }] : [];
+    const formattedProtocolMatches: any[] = [];
+    
+    if (activeDisease !== null && safeFormulations.length > 0) {
+        formattedProtocolMatches.push({
+          id: activeDisease.id,
+          sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
+          audience: "Adult " + primaryDosha + " Protocol",
+          matchKeywords: activeDisease.cardinalSymptoms,
+          goals: [ahara],
+          objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
+          sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
+          timing: "Post-Meal Chronobiology Sync",
+          safetyNotes: [
+            "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
+            "Maintain a 2-hour separation from modern allopathic pharmacological agents."
+          ],
+          medicines: safeFormulations.map(form => ({
+            name: form.name,
+            dosageInstructions: form.posology,
+            timing: `Preparation Style: ${form.formFactor}`,
+            isHeavyMetalOrMineral: false,
+            usComplianceStatus: form.usComplianceStatus,
+            complianceNotes: form.complianceNotes
+          }))
+        });
+    }
 
     return {
       primaryDosha,
       calculatedAgni,
-      matchedDisease,
+      matchedDisease: activeDisease,
       safeFormulations,
       protocolMatches: formattedProtocolMatches, 
       lifestyleRegimen: { ahara, vihara }
