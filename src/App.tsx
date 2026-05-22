@@ -1,16 +1,19 @@
 const handleDownloadPDF = async () => {
+  setIsGeneratingPDF(true);
   const doc = new jsPDF();
   
-  // Page 1: Practitioner
+  // Page 1: Practitioner View
   doc.setFontSize(16);
-  doc.text("Practitioner Clinical Notes", 20, 20);
-  // Add table logic here iterating over result.practitionerPage.rows
-  
-  // Page 2: Patient
+  doc.text(result!.practitionerPage.title, 20, 20);
+  result!.practitionerPage.rows.forEach((row, i) => {
+    doc.text(`${row.medication} | ${row.dosage}`, 20, 30 + (i * 10));
+  });
+
+  // Page 2: Patient View
   doc.addPage();
-  doc.setFontSize(16);
-  doc.text("Your Daily Wellness Plan", 20, 20);
-  // Add table logic here iterating over result.patientPage.rows
-  
+  doc.text(result!.patientPage.title, 20, 20);
+  // ... similar iteration for simplified rows
+
   doc.save("Ayurvedic_Protocol.pdf");
+  setIsGeneratingPDF(false);
 };
