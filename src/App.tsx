@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Activity, BookOpen, CheckCircle2, Layers, RefreshCw, Clock } from "lucide-react";
+import { Activity, BookOpen, Layers, RefreshCw, Clock, SmartphoneNfc, CheckCircle2 } from "lucide-react";
 import { ClassicalAyurvedicEngine } from "./engine";
 import { SYMPTOM_OPTIONS } from "./libraryData";
 import type { EvaluationResult, UserIntake, WeatherProfile } from "./types";
@@ -8,12 +8,29 @@ export default function App() {
   const [intake, setIntake] = useState<UserIntake>({
     age: 38, weight: 72, height: 172,
     city: "San Francisco", country: "United States",
-    weatherType: "Cold-Dry", dailySteps: 12000,
+    weatherType: "Cold-Dry", dailySteps: 0, // Starts at 0 until synced
     selectedSymptoms: [], symptomText: "", goalsText: "", allergies: []
   });
 
   const [result, setResult] = useState<EvaluationResult | null>(null);
   const [allergyInput, setAllergyInput] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncComplete, setSyncComplete] = useState(false);
+
+  // Simulated API Fetch from a Wearable Device
+  const handleSyncDevice = () => {
+    setIsSyncing(true);
+    setSyncComplete(false);
+    
+    // Simulate a 1.5-second network delay to an API
+    setTimeout(() => {
+      // Generate realistic daily steps between 4,000 and 14,000
+      const simulatedSteps = Math.floor(Math.random() * (14000 - 4000 + 1)) + 4000;
+      setIntake(prev => ({ ...prev, dailySteps: simulatedSteps }));
+      setIsSyncing(false);
+      setSyncComplete(true);
+    }, 1500);
+  };
 
   const toggleSymptom = (symptom: string) => {
     setIntake((prev) => ({
@@ -53,7 +70,6 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Metric Intake Sidebar */}
         <section className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl h-fit">
           <h2 className="text-xl font-bold mb-6 text-slate-200 flex items-center gap-2">
             <Activity className="h-5 w-5 text-emerald-400" /> Patient Intake Metrics
@@ -75,7 +91,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Country</label>
                 <input className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none" type="text" value={intake.country} onChange={(e) => setIntake({ ...intake, country: e.target.value })} />
@@ -84,9 +100,31 @@ export default function App() {
                 <label className="block text-xs font-medium text-slate-400 mb-1">City</label>
                 <input className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none" type="text" value={intake.city} onChange={(e) => setIntake({ ...intake, city: e.target.value })} />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Daily Steps</label>
-                <input className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none" type="number" value={intake.dailySteps} onChange={(e) => setIntake({ ...intake, dailySteps: parseInt(e.target.value, 10) || 0 })} />
+            </div>
+
+            {/* NEW WEARABLE API INTEGRATION BLOCK */}
+            <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <label className="block text-xs font-bold tracking-wider text-slate-400 mb-2 uppercase">Biometric Telemetry</label>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={handleSyncDevice}
+                  disabled={isSyncing}
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-xs font-bold transition-all ${isSyncing ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : syncComplete ? 'bg-emerald-900/40 text-emerald-400 border border-emerald-800' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'}`}
+                >
+                  {isSyncing ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Fetching...</>
+                  ) : syncComplete ? (
+                    <><CheckCircle2 className="h-4 w-4" /> Device Synced</>
+                  ) : (
+                    <><SmartphoneNfc className="h-4 w-4" /> Sync Wearable</>
+                  )}
+                </button>
+                <div className="flex-1 bg-slate-900 border border-slate-800 rounded p-2 text-center">
+                  <span className="block text-[10px] text-slate-500 uppercase tracking-widest">Daily Steps</span>
+                  <span className={`text-lg font-mono font-bold ${syncComplete ? 'text-emerald-400' : 'text-slate-300'}`}>
+                    {intake.dailySteps > 0 ? intake.dailySteps.toLocaleString() : "---"}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -100,29 +138,18 @@ export default function App() {
               </select>
             </div>
 
-            {/* RESTORED FREE-TEXT INPUTS */}
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">Additional Symptoms / Conditions</label>
-              <textarea
-                className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                placeholder="e.g., thyroid, blood pressure, fatigue, anxiety"
-                value={intake.symptomText}
-                onChange={(event) => setIntake({ ...intake, symptomText: event.target.value })}
-              />
+              <textarea className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="e.g., thyroid, blood pressure, fatigue, anxiety" value={intake.symptomText} onChange={(event) => setIntake({ ...intake, symptomText: event.target.value })} />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1">Health Goals</label>
-              <textarea
-                className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
-                placeholder="e.g., get fit and active, reduce stress"
-                value={intake.goalsText}
-                onChange={(event) => setIntake({ ...intake, goalsText: event.target.value })}
-              />
+              <textarea className="w-full min-h-20 bg-slate-800 border border-slate-700 rounded p-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="e.g., get fit and active, reduce stress" value={intake.goalsText} onChange={(event) => setIntake({ ...intake, goalsText: event.target.value })} />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">Active Pathological Symptoms (Vikriti Select)</label>
+              <label className="block text-xs font-medium text-slate-400 mb-2">Active Pathological Symptoms (Srotas Select)</label>
               <div className="space-y-2 max-h-48 overflow-y-auto border border-slate-800 p-2 rounded bg-slate-950">
                 {SYMPTOM_OPTIONS.map((symptom, idx) => {
                   const isChecked = intake.selectedSymptoms.includes(symptom);
@@ -157,7 +184,6 @@ export default function App() {
           </div>
         </section>
 
-        {/* Output Diagnostics Panels */}
         <section className="lg:col-span-7 space-y-6">
           {!result ? (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center text-slate-500">
