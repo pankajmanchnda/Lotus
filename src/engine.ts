@@ -64,11 +64,10 @@ export class ClassicalAyurvedicEngine {
     const isUsDestination = input.country.toLowerCase().trim() === "united states" || input.country.toLowerCase().trim() === "us";
     const urgentFlags = urgentSymptoms.filter(s => input.symptomText.toLowerCase().includes(s));
 
-    // Force TypeScript to recognize the type properly
-    const activeDisease = matchedDisease as DiseaseProfile | null;
-
-    const safeFormulations = activeDisease && urgentFlags.length === 0
-      ? activeDisease.remedies.filter((remedy) => {
+    // Force TypeScript to compile cleanly by separating the logic
+    let safeFormulations: Formulation[] = [];
+    if (matchedDisease !== null && urgentFlags.length === 0) {
+        safeFormulations = matchedDisease.remedies.filter((remedy) => {
           const hasHeavyMetals = remedy.ingredients.some((ing) => ing.isHeavyMetalOrMineral);
           const isAgniCompatible = remedy.compatibleAgni.includes(calculatedAgni);
           const normalizedAllergies = input.allergies.map((a) => a.toLowerCase().trim());
@@ -76,8 +75,8 @@ export class ClassicalAyurvedicEngine {
           const passesUSRules = isUsDestination ? remedy.usComplianceStatus === "PASSED" : true;
 
           return !hasHeavyMetals && isAgniCompatible && !matchesAllergy && passesUSRules;
-        })
-      : [];
+        });
+    }
 
     let ahara = "Maintain a regular balanced, seasonal whole-food diet.";
     let vihara = "Target a consistent exercise routine. Daily movement goal: 7,500+ steps.";
@@ -93,33 +92,38 @@ export class ClassicalAyurvedicEngine {
       vihara = "Engage in bracing aerobic workout routines. Wake up early and eliminate afternoon sleep cycles.";
     }
 
-    const formattedProtocolMatches = activeDisease && safeFormulations.length > 0 ? [{
-      id: activeDisease.id,
-      sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
-      audience: "Adult " + primaryDosha + " Protocol",
-      matchKeywords: activeDisease.cardinalSymptoms,
-      goals: [ahara],
-      objective: `Text-validated strategy addressing classical ${activeDisease.name} (${activeDisease.modernApproximation}). Calculated fresh from system inputs.`,
-      sourceExcerpt: `Source Tracking: ${activeDisease.diagnosticSource} | Formulation Framework.`,
-      timing: "Post-Meal Chronobiology Sync",
-      safetyNotes: [
-        "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
-        "Maintain a 2-hour separation from modern allopathic pharmacological agents."
-      ],
-      medicines: safeFormulations.map(form => ({
-        name: form.name,
-        dosageInstructions: form.posology,
-        timing: `Preparation Style: ${form.formFactor}`,
-        isHeavyMetalOrMineral: false,
-        usComplianceStatus: form.usComplianceStatus,
-        complianceNotes: form.complianceNotes
-      }))
-    }] : [];
+    // Bypass TypeScript 'never' bug by using a standard IF block and any[] 
+    const formattedProtocolMatches: any[] = [];
+    
+    if (matchedDisease !== null && safeFormulations.length > 0) {
+        formattedProtocolMatches.push({
+          id: matchedDisease.id,
+          sourceDocument: "BHAISHAJYA RATNAVALI CLASSICAL LIBRARY",
+          audience: "Adult " + primaryDosha + " Protocol",
+          matchKeywords: matchedDisease.cardinalSymptoms,
+          goals: [ahara],
+          objective: `Text-validated strategy addressing classical ${matchedDisease.name} (${matchedDisease.modernApproximation}). Calculated fresh from system inputs.`,
+          sourceExcerpt: `Source Tracking: ${matchedDisease.diagnosticSource} | Formulation Framework.`,
+          timing: "Post-Meal Chronobiology Sync",
+          safetyNotes: [
+            "Formulation contains 100% Kasthaushadhis (botanicals). Clear of mineral materials.",
+            "Maintain a 2-hour separation from modern allopathic pharmacological agents."
+          ],
+          medicines: safeFormulations.map(form => ({
+            name: form.name,
+            dosageInstructions: form.posology,
+            timing: `Preparation Style: ${form.formFactor}`,
+            isHeavyMetalOrMineral: false,
+            usComplianceStatus: form.usComplianceStatus,
+            complianceNotes: form.complianceNotes
+          }))
+        });
+    }
 
     return {
       primaryDosha,
       calculatedAgni,
-      matchedDisease: activeDisease,
+      matchedDisease,
       safeFormulations,
       protocolMatches: formattedProtocolMatches, 
       lifestyleRegimen: { ahara, vihara }
