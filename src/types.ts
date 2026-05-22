@@ -60,7 +60,7 @@ export interface ProtocolMedicineItem {
 export interface ProtocolRecommendation {
   id: string;
   sourceDocument: string;
-  audience: string; // Upgraded to allow dynamic Dosha-based titles
+  audience: string; 
   matchKeywords: string[];
   goals: string[];
   medicines: ProtocolMedicineItem[];
